@@ -1,0 +1,59 @@
+{
+  "name": "green-botanical-ledger",
+  "version": "1.0.0",
+  "description": "Green - The Botanical Ledger Inventory Management System",
+  "main": "main.js",
+  "scripts": {
+    "start": "cross-env ELECTRON_RUN_AS_NODE= electron .",
+    "dist": "cross-env ELECTRON_RUN_AS_NODE= CSC_IDENTITY_AUTO_DISCOVERY=false WIN_CSC_LINK= electron-builder --win --x64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thisaitech/G.git"
+  },
+  "author": "Green Botanical Ledger",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^32.2.7",
+    "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.green.botanical-ledger",
+    "productName": "Green Botanical Ledger",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "forceCodeSigning": false,
+      "signtoolOptions": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Green Botanical Ledger"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!*.md"
+    ]
+  }
+}
