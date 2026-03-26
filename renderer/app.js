@@ -896,9 +896,9 @@ async function loadReportPreview() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download CSV
         </button>
-        <button class="btn-primary" onclick="window.print()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Print
+        <button class="btn-primary" onclick="downloadReportPDF()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Download PDF
         </button>
       </div>
     </div>
@@ -1077,6 +1077,188 @@ async function loadReportTable(type, filters) {
 }
 
 window.printReport = () => window.print();
+
+window.downloadReportPDF = async () => {
+  const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
+  const typeNames = { sales:'Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report' };
+  const typeName = typeNames[reportType] || 'Report';
+  const dateLabel = `${fmtDate(reportDateFrom)} — ${fmtDate(reportDateTo)}`;
+
+  let tableHTML = '';
+  let summaryHTML = '';
+
+  if (reportType === 'sales') {
+    const data = await window.api.getReportSales(filters);
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    const total = rows.reduce((s,r) => s+(r.total_value||0), 0);
+    tableHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Transaction ID</th><th>Product</th><th>Customer</th><th>Qty (KG)</th><th>Unit Price</th><th>Total Value</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map((r,i) => `<tr class="${i%2===0?'even':''}">
+            <td>${i+1}</td><td>${r.transaction_id}</td><td>${r.product_name}</td><td>${r.customer||'—'}</td>
+            <td>${fmt(r.quantity)} ${r.unit}</td><td>₹${fmt(r.unit_price)}</td>
+            <td class="money">₹${fmt(r.total_value)}</td><td><span class="status-chip">${r.status}</span></td><td>${fmtDate(r.sale_date)}</td>
+          </tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:20px">No records found</td></tr>'}
+        </tbody>
+      </table>`;
+    summaryHTML = `
+      <div class="summary-box">
+        <div class="summary-item"><div class="summary-label">Total Transactions</div><div class="summary-value">${rows.length}</div></div>
+        <div class="summary-item"><div class="summary-label">Total Qty Sold (KG)</div><div class="summary-value">${fmt(t.items||0)}</div></div>
+        <div class="summary-item highlight"><div class="summary-label">Total Revenue</div><div class="summary-value">₹${fmt(t.revenue||0)}</div></div>
+      </div>`;
+  } else if (reportType === 'purchase') {
+    const data = await window.api.getReportPurchases(filters);
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    tableHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Transaction ID</th><th>Product</th><th>Vendor</th><th>Qty (KG)</th><th>Unit Cost</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map((r,i) => `<tr class="${i%2===0?'even':''}">
+            <td>${i+1}</td><td>${r.transaction_id}</td><td>${r.product_name}</td><td>${r.vendor||'—'}</td>
+            <td>${fmt(r.quantity)} ${r.unit}</td><td>₹${fmt(r.unit_cost)}</td>
+            <td class="money">₹${fmt(r.total_value)}</td><td><span class="status-chip">${r.status}</span></td><td>${fmtDate(r.purchase_date)}</td>
+          </tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:20px">No records found</td></tr>'}
+        </tbody>
+      </table>`;
+    summaryHTML = `
+      <div class="summary-box">
+        <div class="summary-item"><div class="summary-label">Total Orders</div><div class="summary-value">${rows.length}</div></div>
+        <div class="summary-item"><div class="summary-label">Total Qty (KG)</div><div class="summary-value">${fmt(t.items||0)}</div></div>
+        <div class="summary-item highlight"><div class="summary-label">Total Cost</div><div class="summary-value">₹${fmt(t.cost||0)}</div></div>
+      </div>`;
+  } else if (reportType === 'stock') {
+    const data = await window.api.getReportStock();
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    tableHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Product ID</th><th>Name</th><th>Category</th><th>Brand</th><th>Qty (KG)</th><th>Unit Cost</th><th>Total Value</th><th>Status</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map((r,i) => `<tr class="${i%2===0?'even':''}">
+            <td>${i+1}</td><td>${r.product_id}</td><td>${r.name}</td><td>${r.category||'—'}</td><td>${r.brand||'—'}</td>
+            <td>${fmt(r.quantity)} ${r.unit}</td><td>₹${fmt(r.unit_cost)}</td>
+            <td class="money">₹${fmt(r.quantity*r.unit_cost)}</td><td><span class="status-chip">${r.status}</span></td>
+          </tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:20px">No records found</td></tr>'}
+        </tbody>
+      </table>`;
+    summaryHTML = `
+      <div class="summary-box">
+        <div class="summary-item"><div class="summary-label">Total Products</div><div class="summary-value">${fmt(t.count||0)}</div></div>
+        <div class="summary-item"><div class="summary-label">Total Qty (KG)</div><div class="summary-value">${fmt(t.total_qty||0)}</div></div>
+        <div class="summary-item highlight"><div class="summary-label">Total Stock Value</div><div class="summary-value">₹${fmt(t.total_value||0)}</div></div>
+      </div>`;
+  } else if (reportType === 'manufacture') {
+    const data = await window.api.getReportManufacture(filters);
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    tableHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Transaction ID</th><th>Product</th><th>Brand</th><th>Specification</th><th>Qty (KG)</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map((r,i) => `<tr class="${i%2===0?'even':''}">
+            <td>${i+1}</td><td>${r.transaction_id}</td><td>${r.product_name}</td><td>${r.brand||'—'}</td>
+            <td>${r.specification||'—'}</td><td>${fmt(r.quantity)} ${r.unit}</td>
+            <td><span class="status-chip">${r.status}</span></td><td>${fmtDate(r.manufacture_date)}</td>
+          </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:20px">No records found</td></tr>'}
+        </tbody>
+      </table>`;
+    summaryHTML = `
+      <div class="summary-box">
+        <div class="summary-item"><div class="summary-label">Total Batches</div><div class="summary-value">${fmt(t.count||0)}</div></div>
+        <div class="summary-item highlight"><div class="summary-label">Total Qty (KG)</div><div class="summary-value">${fmt(t.total_qty||0)}</div></div>
+      </div>`;
+  } else if (reportType === 'scrap') {
+    const data = await window.api.getReportScrap(filters);
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    tableHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Transaction ID</th><th>Product</th><th>Qty (KG)</th><th>Reason</th><th>Value Lost</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map((r,i) => `<tr class="${i%2===0?'even':''}">
+            <td>${i+1}</td><td>${r.transaction_id}</td><td>${r.product_name}</td>
+            <td>${fmt(r.quantity)} ${r.unit}</td><td>${r.reason||'—'}</td>
+            <td class="money loss">₹${fmt(r.value_lost)}</td>
+            <td><span class="status-chip">${r.status}</span></td><td>${fmtDate(r.scrap_date)}</td>
+          </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:20px">No records found</td></tr>'}
+        </tbody>
+      </table>`;
+    summaryHTML = `
+      <div class="summary-box">
+        <div class="summary-item"><div class="summary-label">Scrap Events</div><div class="summary-value">${fmt(t.count||0)}</div></div>
+        <div class="summary-item"><div class="summary-label">Total Qty (KG)</div><div class="summary-value">${fmt(t.total_qty||0)}</div></div>
+        <div class="summary-item highlight loss"><div class="summary-label">Total Value Lost</div><div class="summary-value">₹${fmt(t.total_loss||0)}</div></div>
+      </div>`;
+  }
+
+  const printWin = window.open('', '_blank');
+  printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${typeName}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; padding: 24px; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:16px; border-bottom:3px solid #2d6a2d; margin-bottom:20px; }
+    .brand { display:flex; flex-direction:column; gap:2px; }
+    .brand-name { font-size:22px; font-weight:800; color:#2d6a2d; letter-spacing:-0.5px; }
+    .brand-sub { font-size:10px; font-weight:600; color:#666; letter-spacing:0.1em; text-transform:uppercase; }
+    .report-info { text-align:right; }
+    .report-title { font-size:16px; font-weight:700; color:#2d6a2d; margin-bottom:4px; }
+    .report-date { font-size:11px; color:#666; }
+    .report-generated { font-size:10px; color:#999; margin-top:4px; }
+    table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+    thead tr { background:#2d6a2d; color:#fff; }
+    th { padding:8px 10px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.04em; }
+    td { padding:7px 10px; font-size:11px; border-bottom:1px solid #e8e8e8; }
+    tr.even td { background:#f7faf7; }
+    .money { font-weight:700; color:#1a6b1a; }
+    .loss { color:#c0392b !important; }
+    .status-chip { background:#e8f0e5; color:#2d6a2d; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+    .summary-box { display:flex; gap:16px; margin-top:8px; }
+    .summary-item { flex:1; border:1px solid #e0e0e0; border-radius:8px; padding:12px 16px; }
+    .summary-item.highlight { background:#2d6a2d; color:#fff; border-color:#2d6a2d; }
+    .summary-item.highlight .summary-label { color:rgba(255,255,255,0.8); }
+    .summary-item.loss.highlight { background:#c0392b; border-color:#c0392b; }
+    .summary-label { font-size:10px; color:#888; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px; }
+    .summary-value { font-size:18px; font-weight:800; color:#1a1a1a; }
+    .summary-item.highlight .summary-value { color:#fff; }
+    .footer { margin-top:24px; padding-top:12px; border-top:1px solid #e0e0e0; display:flex; justify-content:space-between; font-size:10px; color:#999; }
+    @media print {
+      body { padding:12px; }
+      @page { margin:15mm; size:A4 landscape; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="brand-name">Green</div>
+      <div class="brand-sub">GI Wire Inventory Ledger</div>
+    </div>
+    <div class="report-info">
+      <div class="report-title">${typeName.toUpperCase()}</div>
+      <div class="report-date">Period: ${dateLabel}</div>
+      <div class="report-generated">Generated: ${new Date().toLocaleString('en-IN')}</div>
+    </div>
+  </div>
+  ${tableHTML}
+  ${summaryHTML}
+  <div class="footer">
+    <span>Green Inventory Management System</span>
+    <span>Confidential — For Internal Use Only</span>
+  </div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`);
+  printWin.document.close();
+  showToast('PDF report opened — use Save as PDF in print dialog');
+};
 
 window.downloadReportCSV = async () => {
   const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
