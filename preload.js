@@ -36,4 +36,7 @@ contextBridge.exposeInMainWorld('api', {
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
+
+  // PDF
+  printPDF: (html) => ipcRenderer.invoke('report:printPDF', html),
 });

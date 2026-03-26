@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const Database = require('better-sqlite3');
 
 let mainWindow;
@@ -353,6 +354,23 @@ function registerIpcHandlers() {
     db.prepare('INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)').run(key, value);
     return { success: true };
   });
+
+  // PDF Export
+  ipcMain.handle('report:printPDF', async (e, htmlContent) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save Report as PDF',
+      defaultPath: path.join(app.getPath('downloads'), 'report.pdf'),
+      filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+    });
+    if (canceled || !filePath) return { success: false };
+
+    const pdfWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false, contextIsolation: false } });
+    await pdfWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent));
+    const pdfData = await pdfWin.webContents.printToPDF({ landscape: true, printBackground: true, pageSize: 'A4' });
+    pdfWin.destroy();
+    fs.writeFileSync(filePath, pdfData);
+    return { success: true, filePath };
+  });
 }
 
 // ── App lifecycle ──────────────────────────────────────────────────────────────
@@ -367,10 +385,16 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      nativeWindowOpen: true,
       preload: path.join(__dirname, 'preload.js')
     },
     title: 'Green – The Botanical Ledger',
     show: false
+  });
+
+  // Allow print windows to open
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    return { action: 'allow', overrideBrowserWindowOptions: { width: 900, height: 700, webPreferences: { nodeIntegration: false, contextIsolation: false } } };
   });
 
   mainWindow.loadFile('renderer/index.html');

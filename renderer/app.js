@@ -1195,8 +1195,7 @@ window.downloadReportPDF = async () => {
       </div>`;
   }
 
-  const printWin = window.open('', '_blank');
-  printWin.document.write(`<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -1205,16 +1204,14 @@ window.downloadReportPDF = async () => {
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; padding: 24px; }
     .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:16px; border-bottom:3px solid #2d6a2d; margin-bottom:20px; }
-    .brand { display:flex; flex-direction:column; gap:2px; }
-    .brand-name { font-size:22px; font-weight:800; color:#2d6a2d; letter-spacing:-0.5px; }
+    .brand-name { font-size:22px; font-weight:800; color:#2d6a2d; }
     .brand-sub { font-size:10px; font-weight:600; color:#666; letter-spacing:0.1em; text-transform:uppercase; }
-    .report-info { text-align:right; }
-    .report-title { font-size:16px; font-weight:700; color:#2d6a2d; margin-bottom:4px; }
-    .report-date { font-size:11px; color:#666; }
-    .report-generated { font-size:10px; color:#999; margin-top:4px; }
+    .report-title { font-size:16px; font-weight:700; color:#2d6a2d; margin-bottom:4px; text-align:right; }
+    .report-date { font-size:11px; color:#666; text-align:right; }
+    .report-generated { font-size:10px; color:#999; margin-top:4px; text-align:right; }
     table { width:100%; border-collapse:collapse; margin-bottom:16px; }
     thead tr { background:#2d6a2d; color:#fff; }
-    th { padding:8px 10px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.04em; }
+    th { padding:8px 10px; text-align:left; font-size:11px; font-weight:600; }
     td { padding:7px 10px; font-size:11px; border-bottom:1px solid #e8e8e8; }
     tr.even td { background:#f7faf7; }
     .money { font-weight:700; color:#1a6b1a; }
@@ -1224,24 +1221,19 @@ window.downloadReportPDF = async () => {
     .summary-item { flex:1; border:1px solid #e0e0e0; border-radius:8px; padding:12px 16px; }
     .summary-item.highlight { background:#2d6a2d; color:#fff; border-color:#2d6a2d; }
     .summary-item.highlight .summary-label { color:rgba(255,255,255,0.8); }
-    .summary-item.loss.highlight { background:#c0392b; border-color:#c0392b; }
     .summary-label { font-size:10px; color:#888; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px; }
-    .summary-value { font-size:18px; font-weight:800; color:#1a1a1a; }
+    .summary-value { font-size:18px; font-weight:800; }
     .summary-item.highlight .summary-value { color:#fff; }
     .footer { margin-top:24px; padding-top:12px; border-top:1px solid #e0e0e0; display:flex; justify-content:space-between; font-size:10px; color:#999; }
-    @media print {
-      body { padding:12px; }
-      @page { margin:15mm; size:A4 landscape; }
-    }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="brand">
+    <div>
       <div class="brand-name">Green</div>
       <div class="brand-sub">GI Wire Inventory Ledger</div>
     </div>
-    <div class="report-info">
+    <div>
       <div class="report-title">${typeName.toUpperCase()}</div>
       <div class="report-date">Period: ${dateLabel}</div>
       <div class="report-generated">Generated: ${new Date().toLocaleString('en-IN')}</div>
@@ -1253,11 +1245,16 @@ window.downloadReportPDF = async () => {
     <span>Green Inventory Management System</span>
     <span>Confidential — For Internal Use Only</span>
   </div>
-  <script>window.onload = () => { window.print(); }<\/script>
 </body>
-</html>`);
-  printWin.document.close();
-  showToast('PDF report opened — use Save as PDF in print dialog');
+</html>`;
+
+  showToast('Preparing PDF…');
+  const result = await window.api.printPDF(html);
+  if (result.success) {
+    showToast('PDF saved to: ' + result.filePath);
+  } else {
+    showToast('PDF export cancelled', 'error');
+  }
 };
 
 window.downloadReportCSV = async () => {
