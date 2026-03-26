@@ -506,7 +506,7 @@ window.saveEditInventory = async (id) => {
     category: document.getElementById('ei_category').value.trim(),
     description: document.getElementById('ei_desc').value.trim(),
     quantity: parseFloat(document.getElementById('ei_qty').value) || 0,
-    unit: document.getElementById('ei_unit').value.trim() || 'Units',
+    unit: document.getElementById('ei_unit').value.trim() || 'KG',
     unit_cost: parseFloat(document.getElementById('ei_cost').value) || 0,
     image_emoji: document.getElementById('ei_emoji').value || '🌿',
   };
@@ -892,9 +892,9 @@ async function loadReportPreview() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           View Report
         </button>
-        <button class="btn-secondary" onclick="printReport()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Download PDF
+        <button class="btn-secondary" onclick="downloadReportCSV()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download CSV
         </button>
         <button class="btn-primary" onclick="window.print()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -1077,6 +1077,54 @@ async function loadReportTable(type, filters) {
 }
 
 window.printReport = () => window.print();
+
+window.downloadReportCSV = async () => {
+  const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
+  const typeName = { sales:'Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap' }[reportType] || 'Report';
+  let csv = '';
+  let filename = `${typeName}-Report-${reportDateFrom}-to-${reportDateTo}.csv`;
+
+  if (reportType === 'sales') {
+    const data = await window.api.getReportSales(filters);
+    const rows = data.rows || [];
+    csv = ['Transaction ID,Product,Customer,Quantity,Unit,Unit Price,Total Value,Status,Date',
+      ...rows.map(r => `"${r.transaction_id}","${r.product_name}","${r.customer||''}",${r.quantity},"${r.unit}",${r.unit_price},${r.total_value},"${r.status}","${r.sale_date}"`)
+    ].join('\n');
+  } else if (reportType === 'purchase') {
+    const data = await window.api.getReportPurchases(filters);
+    const rows = data.rows || [];
+    csv = ['Transaction ID,Product,Vendor,Quantity,Unit,Unit Cost,Total Value,Status,Date',
+      ...rows.map(r => `"${r.transaction_id}","${r.product_name}","${r.vendor||''}",${r.quantity},"${r.unit}",${r.unit_cost},${r.total_value},"${r.status}","${r.purchase_date}"`)
+    ].join('\n');
+  } else if (reportType === 'stock') {
+    const data = await window.api.getReportStock();
+    const rows = data.rows || [];
+    csv = ['Product ID,Name,Category,Brand,Quantity,Unit,Unit Cost,Total Value,Status',
+      ...rows.map(r => `"${r.product_id}","${r.name}","${r.category||''}","${r.brand||''}",${r.quantity},"${r.unit}",${r.unit_cost},${(r.quantity*r.unit_cost).toFixed(2)},"${r.status}"`)
+    ].join('\n');
+    filename = `Stock-Report-${new Date().toISOString().slice(0,10)}.csv`;
+  } else if (reportType === 'manufacture') {
+    const data = await window.api.getReportManufacture(filters);
+    const rows = data.rows || [];
+    csv = ['Transaction ID,Product,Brand,Specification,Quantity,Unit,Status,Date',
+      ...rows.map(r => `"${r.transaction_id}","${r.product_name}","${r.brand||''}","${r.specification||''}",${r.quantity},"${r.unit}","${r.status}","${r.manufacture_date}"`)
+    ].join('\n');
+  } else if (reportType === 'scrap') {
+    const data = await window.api.getReportScrap(filters);
+    const rows = data.rows || [];
+    csv = ['Transaction ID,Product,Quantity,Unit,Reason,Value Lost,Status,Date',
+      ...rows.map(r => `"${r.transaction_id}","${r.product_name}",${r.quantity},"${r.unit}","${r.reason||''}",${r.value_lost},"${r.status}","${r.scrap_date}"`)
+    ].join('\n');
+  }
+
+  if (!csv) { showToast('No data to export', 'error'); return; }
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${typeName} report downloaded`);
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    SETTINGS PAGE
@@ -1366,7 +1414,7 @@ async function showAddInventoryModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Unit</label>
-        <input class="form-input" id="ni_unit" value="Units">
+        <input class="form-input" id="ni_unit" value="KG">
       </div>
       <div class="form-group">
         <label class="form-label">Unit Cost ($)</label>
@@ -1421,7 +1469,7 @@ async function showAddPurchaseModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Unit</label>
-        <input class="form-input" id="ap_unit" value="Units">
+        <input class="form-input" id="ap_unit" value="KG">
       </div>
       <div class="form-group">
         <label class="form-label">Unit Cost ($) *</label>
@@ -1498,7 +1546,7 @@ async function showAddSaleModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Unit</label>
-        <input class="form-input" id="as_unit" value="Units">
+        <input class="form-input" id="as_unit" value="KG">
       </div>
       <div class="form-group">
         <label class="form-label">Unit Price ($) *</label>

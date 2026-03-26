@@ -85,54 +85,59 @@ function initDatabase() {
     );
   `);
 
-  const count = db.prepare('SELECT COUNT(*) as c FROM inventory').get();
-  if (count.c === 0) seedData();
+  // Reset DB if data version is outdated (clears old botanical seed data)
+  const dbVer = db.prepare("SELECT value FROM settings WHERE key='db_version'").get();
+  if (!dbVer || dbVer.value !== '2') {
+    db.exec('DELETE FROM inventory; DELETE FROM purchases; DELETE FROM sales; DELETE FROM manufacture; DELETE FROM scrap;');
+    seedData();
+    db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES ('db_version','2')").run();
+  }
 }
 
 function seedData() {
   const items = [
-    { product_id: 'GRN-001', name: 'Ficus Lyrata (Bambino)', description: 'Compact fiddle-leaf fig', brand: 'Evergreen Nursery', category: 'Indoor Botanicals', quantity: 120, unit: 'Units', unit_cost: 18, status: 'In Stock', image_emoji: '🌿' },
-    { product_id: 'GRN-002', name: 'Sansevieria Trifasciata', description: 'Snake plant, low maintenance', brand: 'Botanical Imports', category: 'Indoor Botanicals', quantity: 45, unit: 'Units', unit_cost: 12, status: 'Low Stock', image_emoji: '🌱' },
-    { product_id: 'GRN-003', name: 'Monstera Deliciosa', description: 'Swiss cheese plant', brand: 'Botanical Imports', category: 'Indoor Botanicals', quantity: 85, unit: 'Units', unit_cost: 24, status: 'In Stock', image_emoji: '🌿' },
-    { product_id: 'GRN-004', name: 'Spathiphyllum (Peace Lily)', description: 'Air purifying plant', brand: 'Evergreen Nursery', category: 'Indoor Botanicals', quantity: 200, unit: 'Units', unit_cost: 8, status: 'In Stock', image_emoji: '🌸' },
-    { product_id: 'GRN-005', name: 'Organic Fertilizer', description: 'Premium botanical fertilizer', brand: 'EcoEarth Corp', category: 'Soil & Nutrients', quantity: 820, unit: 'kg', unit_cost: 2.5, status: 'In Stock', image_emoji: '🌾' },
-    { product_id: 'GRN-006', name: 'Botanical Seeds Mix', description: 'Premium mixed seeds collection', brand: 'Arid Flora', category: 'Seeds', quantity: 450, unit: 'Packs', unit_cost: 5, status: 'In Stock', image_emoji: '🌻' },
-    { product_id: 'GRN-007', name: 'Watering System Kit', description: 'Drip irrigation system', brand: 'Global Irrigation', category: 'Equipment', quantity: 61, unit: 'Units', unit_cost: 45, status: 'In Stock', image_emoji: '💧' },
-    { product_id: 'GRN-008', name: 'Pruning Tools Set', description: 'Professional gardening tools', brand: 'Verdant Tools', category: 'Tools & Hardware', quantity: 29, unit: 'Sets', unit_cost: 35, status: 'Low Stock', image_emoji: '✂️' },
-    { product_id: 'GRN-009', name: 'Evergreen Oak Saplings', description: 'Hardy outdoor oak trees', brand: 'Heritage Nursery', category: 'Trees', quantity: 45, unit: 'Units', unit_cost: 28, status: 'Low Stock', image_emoji: '🌳' },
-    { product_id: 'GRN-010', name: 'Premium Humus Mix', description: 'High-quality compost blend', brand: 'EcoEarth Corp', category: 'Soil & Nutrients', quantity: 200, unit: 'kg', unit_cost: 4.2, status: 'In Stock', image_emoji: '🌾' },
-    { product_id: 'GRN-011', name: 'Ficus Altissima', description: 'Council tree variety', brand: 'Evergreen Nursery', category: 'Indoor Botanicals', quantity: 30, unit: 'Units', unit_cost: 32, status: 'Low Stock', image_emoji: '🌿' },
-    { product_id: 'GRN-012', name: 'Desert Rose Hybrid', description: 'Adenium obesum hybrid', brand: 'Arid Flora', category: 'Succulents', quantity: 500, unit: 'Units', unit_cost: 15, status: 'In Stock', image_emoji: '🌹' },
+    { product_id: 'GRN-001', name: 'Tata GI Wire 10mm', description: 'GI Wire 10mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 120, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-002', name: 'Tata GI Wire 12mm', description: 'GI Wire 12mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 140, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-003', name: 'Tata GI Wire 14mm', description: 'GI Wire 14mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 160, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-004', name: 'Tata GI Wire 16mm', description: 'GI Wire 16mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 180, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-005', name: 'Tata GI Wire 18mm', description: 'GI Wire 18mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 200, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-006', name: 'Tata GI Wire 20mm', description: 'GI Wire 20mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 220, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-007', name: 'Tata GI Wire 22mm', description: 'GI Wire 22mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 240, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-008', name: 'Tata GI Wire 24mm', description: 'GI Wire 24mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 260, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-009', name: 'Tata GI Wire 26mm', description: 'GI Wire 26mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 280, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-010', name: 'Tata GI Wire 28mm', description: 'GI Wire 28mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 300, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-011', name: 'JSW GI Wire 10mm', description: 'GI Wire 10mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 115, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-012', name: 'JSW GI Wire 12mm', description: 'GI Wire 12mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 135, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-013', name: 'JSW GI Wire 14mm', description: 'GI Wire 14mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 155, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-014', name: 'JSW GI Wire 16mm', description: 'GI Wire 16mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 175, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-015', name: 'JSW GI Wire 18mm', description: 'GI Wire 18mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 195, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-016', name: 'JSW GI Wire 20mm', description: 'GI Wire 20mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 215, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-017', name: 'JSW GI Wire 22mm', description: 'GI Wire 22mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 235, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-018', name: 'JSW GI Wire 24mm', description: 'GI Wire 24mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 255, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-019', name: 'JSW GI Wire 26mm', description: 'GI Wire 26mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 275, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-020', name: 'JSW GI Wire 28mm', description: 'GI Wire 28mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 295, status: 'In Stock', image_emoji: '🔩' },
   ];
   const ins = db.prepare(`INSERT INTO inventory (product_id,name,description,brand,category,quantity,unit,unit_cost,status,image_emoji) VALUES (?,?,?,?,?,?,?,?,?,?)`);
   items.forEach(i => ins.run(i.product_id, i.name, i.description, i.brand, i.category, i.quantity, i.unit, i.unit_cost, i.status, i.image_emoji));
 
   const purchases = [
-    { transaction_id: 'GRN-9201', product_name: 'Evergreen Oak Saplings', vendor: 'Heritage Nursery', quantity: 45, unit: 'Units', unit_cost: 28, total_value: 1250, status: 'RESTOCKED' },
-    { transaction_id: 'GRN-9188', product_name: 'Premium Humus Mix', vendor: 'EcoEarth Corp', quantity: 200, unit: 'kg', unit_cost: 4.2, total_value: 840, status: 'FULFILLED' },
-    { transaction_id: 'GRN-8992', product_name: 'Micro-Drip Connectors', vendor: 'Global Irrigation', quantity: 1200, unit: 'Pcs', unit_cost: 2.6, total_value: 3120, status: 'PENDING' },
-    { transaction_id: 'GRN-8851', product_name: 'Organic Fertilizer', vendor: 'EcoEarth Corp', quantity: 500, unit: 'kg', unit_cost: 2.5, total_value: 1250, status: 'FULFILLED' },
-    { transaction_id: 'GRN-8743', product_name: 'Botanical Seeds Mix', vendor: 'Arid Flora', quantity: 200, unit: 'Packs', unit_cost: 5, total_value: 1000, status: 'FULFILLED' },
+    { transaction_id: 'GRN-9201', product_name: 'Tata GI Wire 10mm', vendor: 'Tata Steel', quantity: 500, unit: 'KG', unit_cost: 120, total_value: 60000, status: 'FULFILLED' },
+    { transaction_id: 'GRN-9188', product_name: 'Tata GI Wire 16mm', vendor: 'Tata Steel', quantity: 500, unit: 'KG', unit_cost: 180, total_value: 90000, status: 'FULFILLED' },
+    { transaction_id: 'GRN-8992', product_name: 'JSW GI Wire 12mm', vendor: 'JSW Steel', quantity: 500, unit: 'KG', unit_cost: 135, total_value: 67500, status: 'FULFILLED' },
+    { transaction_id: 'GRN-8851', product_name: 'JSW GI Wire 20mm', vendor: 'JSW Steel', quantity: 500, unit: 'KG', unit_cost: 215, total_value: 107500, status: 'PENDING' },
+    { transaction_id: 'GRN-8743', product_name: 'Tata GI Wire 24mm', vendor: 'Tata Steel', quantity: 500, unit: 'KG', unit_cost: 260, total_value: 130000, status: 'FULFILLED' },
   ];
   const insPur = db.prepare(`INSERT INTO purchases (transaction_id,product_name,vendor,quantity,unit,unit_cost,total_value,status) VALUES (?,?,?,?,?,?,?,?)`);
   purchases.forEach(p => insPur.run(p.transaction_id, p.product_name, p.vendor, p.quantity, p.unit, p.unit_cost, p.total_value, p.status));
 
   const sales = [
-    { transaction_id: 'SL-9021', product_name: 'Ficus Lyrata (Bambino)', customer: 'Botanical Imports Ltd', quantity: 120, unit: 'Units', unit_price: 24, total_value: 2880, status: 'COMPLETED', category: 'Direct Sale' },
-    { transaction_id: 'SL-9022', product_name: 'Sansevieria Trifasciata', customer: 'Green Spaces Co', quantity: 45, unit: 'Units', unit_price: 18.5, total_value: 832.5, status: 'COMPLETED', category: 'Direct Sale' },
-    { transaction_id: 'SL-9023', product_name: 'Monstera Deliciosa', customer: 'Urban Jungle Ltd', quantity: 85, unit: 'Units', unit_price: 32, total_value: 2720, status: 'PROCESSING', category: 'Direct Sale' },
-    { transaction_id: 'SL-9024', product_name: 'Spathiphyllum (Peace Lily)', customer: 'Flower World', quantity: 200, unit: 'Units', unit_price: 12, total_value: 2400, status: 'COMPLETED', category: 'Direct Sale' },
-    { transaction_id: 'SL-8901', product_name: 'Organic Mulch Blend', customer: 'Scrap Recovery Div.', quantity: 12, unit: 'Tons', unit_price: 70, total_value: 840, status: 'COMPLETED', category: 'Scrap Sale' },
+    { transaction_id: 'SL-9021', product_name: 'Tata GI Wire 10mm', customer: 'Ram Hardware', quantity: 100, unit: 'KG', unit_price: 135, total_value: 13500, status: 'COMPLETED', category: 'Direct Sale' },
+    { transaction_id: 'SL-9022', product_name: 'JSW GI Wire 12mm', customer: 'Shyam Traders', quantity: 150, unit: 'KG', unit_price: 150, total_value: 22500, status: 'COMPLETED', category: 'Direct Sale' },
+    { transaction_id: 'SL-9023', product_name: 'Tata GI Wire 18mm', customer: 'City Builders', quantity: 200, unit: 'KG', unit_price: 220, total_value: 44000, status: 'PROCESSING', category: 'Direct Sale' },
+    { transaction_id: 'SL-9024', product_name: 'JSW GI Wire 22mm', customer: 'Metro Constructions', quantity: 120, unit: 'KG', unit_price: 250, total_value: 30000, status: 'COMPLETED', category: 'Direct Sale' },
   ];
   const insSale = db.prepare(`INSERT INTO sales (transaction_id,product_name,customer,quantity,unit,unit_price,total_value,status,category) VALUES (?,?,?,?,?,?,?,?,?)`);
   sales.forEach(s => insSale.run(s.transaction_id, s.product_name, s.customer, s.quantity, s.unit, s.unit_price, s.total_value, s.status, s.category));
-
-  const mfgs = [
-    { transaction_id: 'MFG-1001', product_name: 'Ficus Altissima', brand: 'Evergreen Nursery Co.', specification: 'Large / 14-inch', quantity: 240, unit: 'Units', status: 'MANUFACTURED' },
-    { transaction_id: 'MFG-1002', product_name: 'Desert Rose Hybrid', brand: 'Arid Flora Brands', specification: 'Small / 4-inch', quantity: 500, unit: 'Units', status: 'MANUFACTURED' },
-  ];
-  const insMfg = db.prepare(`INSERT INTO manufacture (transaction_id,product_name,brand,specification,quantity,unit,status) VALUES (?,?,?,?,?,?,?)`);
-  mfgs.forEach(m => insMfg.run(m.transaction_id, m.product_name, m.brand, m.specification, m.quantity, m.unit, m.status));
 }
 
 // ── IPC Handlers ───────────────────────────────────────────────────────────────
@@ -260,7 +265,10 @@ function registerIpcHandlers() {
     if (filters?.dateTo)   { q += ' AND sale_date <= ?'; p.push(filters.dateTo+' 23:59:59'); }
     q += ' ORDER BY sale_date DESC';
     const rows = db.prepare(q).all(...p);
-    const totals = db.prepare('SELECT COUNT(*) as count, SUM(quantity) as items, SUM(total_value) as revenue FROM sales').get();
+    let tq = 'SELECT COUNT(*) as count, SUM(quantity) as items, SUM(total_value) as revenue FROM sales WHERE 1=1'; const tp = [];
+    if (filters?.dateFrom) { tq += ' AND sale_date >= ?'; tp.push(filters.dateFrom); }
+    if (filters?.dateTo)   { tq += ' AND sale_date <= ?'; tp.push(filters.dateTo+' 23:59:59'); }
+    const totals = db.prepare(tq).get(...tp);
     return { rows, totals };
   });
 
@@ -270,7 +278,10 @@ function registerIpcHandlers() {
     if (filters?.dateTo)   { q += ' AND purchase_date <= ?'; p.push(filters.dateTo+' 23:59:59'); }
     q += ' ORDER BY purchase_date DESC';
     const rows = db.prepare(q).all(...p);
-    const totals = db.prepare('SELECT COUNT(*) as count, SUM(quantity) as items, SUM(total_value) as cost FROM purchases').get();
+    let tq = 'SELECT COUNT(*) as count, SUM(quantity) as items, SUM(total_value) as cost FROM purchases WHERE 1=1'; const tp = [];
+    if (filters?.dateFrom) { tq += ' AND purchase_date >= ?'; tp.push(filters.dateFrom); }
+    if (filters?.dateTo)   { tq += ' AND purchase_date <= ?'; tp.push(filters.dateTo+' 23:59:59'); }
+    const totals = db.prepare(tq).get(...tp);
     return { rows, totals };
   });
 
@@ -290,9 +301,16 @@ function registerIpcHandlers() {
     return { rows, totals };
   });
 
-  ipcMain.handle('reports:getScrap', () => {
-    const rows = db.prepare('SELECT * FROM scrap ORDER BY scrap_date DESC').all();
-    const totals = db.prepare('SELECT COUNT(*) as count, SUM(quantity) as total_qty, SUM(value_lost) as total_loss FROM scrap').get();
+  ipcMain.handle('reports:getScrap', (e, filters) => {
+    let q = 'SELECT * FROM scrap WHERE 1=1'; const p = [];
+    if (filters?.dateFrom) { q += ' AND scrap_date >= ?'; p.push(filters.dateFrom); }
+    if (filters?.dateTo)   { q += ' AND scrap_date <= ?'; p.push(filters.dateTo+' 23:59:59'); }
+    q += ' ORDER BY scrap_date DESC';
+    const rows = db.prepare(q).all(...p);
+    let tq = 'SELECT COUNT(*) as count, SUM(quantity) as total_qty, SUM(value_lost) as total_loss FROM scrap WHERE 1=1'; const tp = [];
+    if (filters?.dateFrom) { tq += ' AND scrap_date >= ?'; tp.push(filters.dateFrom); }
+    if (filters?.dateTo)   { tq += ' AND scrap_date <= ?'; tp.push(filters.dateTo+' 23:59:59'); }
+    const totals = db.prepare(tq).get(...tp);
     return { rows, totals };
   });
 
