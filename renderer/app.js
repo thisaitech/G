@@ -922,18 +922,13 @@ async function loadReportTable(type, filters) {
       <div class="table-wrapper">
         <table>
           <thead><tr>
-            <th>ID</th><th>Botanical Entity</th><th>Quantity</th><th>Unit Price</th><th>Total Value</th><th>Status</th>
+            <th>ID</th><th>Product</th><th>Quantity</th><th>Unit Price</th><th>Total Value</th><th>Status</th>
           </tr></thead>
           <tbody>
             ${rows.map(r => `
               <tr>
                 <td class="td-green">#${r.transaction_id}</td>
-                <td>
-                  <div class="product-cell">
-                    <div class="product-emoji" style="width:28px;height:28px;font-size:16px">🌿</div>
-                    <span class="td-bold">${r.product_name}</span>
-                  </div>
-                </td>
+                <td class="td-bold">${r.product_name}</td>
                 <td>${fmt(r.quantity)} ${r.unit}</td>
                 <td class="td-money">${fmtMoney(r.unit_price)}</td>
                 <td class="td-money td-bold">${fmtMoney(r.total_value)}</td>
@@ -1791,6 +1786,19 @@ window.submitAddSale = async () => {
   if (!name) { showToast('Product name is required', 'error'); return; }
   if (!qty || qty <= 0) { showToast('Quantity must be > 0', 'error'); return; }
   if (!price || price <= 0) { showToast('Unit price must be > 0', 'error'); return; }
+
+  // Check stock availability
+  const inv = await window.api.getInventory({});
+  const product = inv.find(i => i.name.toLowerCase() === name.toLowerCase());
+  if (product && product.quantity <= 0) {
+    showToast(`Cannot sell "${name}" — stock is 0 (Out of Stock)`, 'error');
+    return;
+  }
+  if (product && qty > product.quantity) {
+    showToast(`Only ${product.quantity} KG available for "${name}"`, 'error');
+    return;
+  }
+
   const result = await window.api.addSale({
     product_name: name,
     customer: document.getElementById('as_customer').value.trim(),
