@@ -888,7 +888,7 @@ async function loadReportPreview() {
       <span class="preview-badge"><span class="preview-dot"></span>PREVIEWING: ${typeName}</span>
       <span class="preview-date">📅 ${dateLabel}</span>
       <div class="preview-actions">
-        <button class="btn-accent" onclick="navigate('reports')">
+        <button class="btn-accent" onclick="viewReportPDF()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           View Report
         </button>
@@ -1078,7 +1078,15 @@ async function loadReportTable(type, filters) {
 
 window.printReport = () => window.print();
 
-window.downloadReportPDF = async () => {
+window.viewReportPDF = async () => {
+  showToast('Opening report…');
+  const html = await buildReportHTML();
+  if (!html) return;
+  const typeNames = { sales:'Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report' };
+  await window.api.viewHTML(html, typeNames[reportType] || 'Report');
+};
+
+async function buildReportHTML() {
   const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
   const typeNames = { sales:'Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report' };
   const typeName = typeNames[reportType] || 'Report';
@@ -1248,10 +1256,22 @@ window.downloadReportPDF = async () => {
 </body>
 </html>`;
 
+  return html;
+}
+
+window.downloadReportPDF = async () => {
+  const typeKey = { sales:'Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap' }[reportType] || 'Report';
+  const dateFrom = reportDateFrom || new Date().toISOString().slice(0,10);
+  const dateTo = reportDateTo || new Date().toISOString().slice(0,10);
+  const pdfFilename = reportType === 'stock'
+    ? `Stock-Report-${new Date().toISOString().slice(0,10)}.pdf`
+    : `${typeKey}-Report-${dateFrom}-to-${dateTo}.pdf`;
   showToast('Preparing PDF…');
-  const result = await window.api.printPDF(html);
+  const html = await buildReportHTML();
+  if (!html) return;
+  const result = await window.api.printPDF(html, pdfFilename);
   if (result.success) {
-    showToast('PDF saved to: ' + result.filePath);
+    showToast('PDF saved: ' + result.filePath);
   } else {
     showToast('PDF export cancelled', 'error');
   }
@@ -1260,8 +1280,12 @@ window.downloadReportPDF = async () => {
 window.downloadReportCSV = async () => {
   const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
   const typeName = { sales:'Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap' }[reportType] || 'Report';
+  const csvDateFrom = reportDateFrom || new Date().toISOString().slice(0,10);
+  const csvDateTo = reportDateTo || new Date().toISOString().slice(0,10);
   let csv = '';
-  let filename = `${typeName}-Report-${reportDateFrom}-to-${reportDateTo}.csv`;
+  let filename = reportType === 'stock'
+    ? `Stock-Report-${new Date().toISOString().slice(0,10)}.csv`
+    : `${typeName}-Report-${csvDateFrom}-to-${csvDateTo}.csv`;
 
   if (reportType === 'sales') {
     const data = await window.api.getReportSales(filters);
@@ -1281,7 +1305,6 @@ window.downloadReportCSV = async () => {
     csv = ['Product ID,Name,Category,Brand,Quantity,Unit,Unit Cost,Total Value,Status',
       ...rows.map(r => `"${r.product_id}","${r.name}","${r.category||''}","${r.brand||''}",${r.quantity},"${r.unit}",${r.unit_cost},${(r.quantity*r.unit_cost).toFixed(2)},"${r.status}"`)
     ].join('\n');
-    filename = `Stock-Report-${new Date().toISOString().slice(0,10)}.csv`;
   } else if (reportType === 'manufacture') {
     const data = await window.api.getReportManufacture(filters);
     const rows = data.rows || [];

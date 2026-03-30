@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
+
 
 let mainWindow;
 let db;
@@ -86,59 +87,41 @@ function initDatabase() {
     );
   `);
 
-  // Reset DB if data version is outdated (clears old botanical seed data)
+  // Reset DB if data version is outdated
   const dbVer = db.prepare("SELECT value FROM settings WHERE key='db_version'").get();
-  if (!dbVer || dbVer.value !== '2') {
+  if (!dbVer || dbVer.value !== '4') {
+    // Version 4: full reset including inventory — start everything at 0
     db.exec('DELETE FROM inventory; DELETE FROM purchases; DELETE FROM sales; DELETE FROM manufacture; DELETE FROM scrap;');
     seedData();
-    db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES ('db_version','2')").run();
+    db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES ('db_version','4')").run();
   }
 }
 
 function seedData() {
   const items = [
-    { product_id: 'GRN-001', name: 'Tata GI Wire 10mm', description: 'GI Wire 10mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 120, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-002', name: 'Tata GI Wire 12mm', description: 'GI Wire 12mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 140, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-003', name: 'Tata GI Wire 14mm', description: 'GI Wire 14mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 160, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-004', name: 'Tata GI Wire 16mm', description: 'GI Wire 16mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 180, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-005', name: 'Tata GI Wire 18mm', description: 'GI Wire 18mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 200, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-006', name: 'Tata GI Wire 20mm', description: 'GI Wire 20mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 220, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-007', name: 'Tata GI Wire 22mm', description: 'GI Wire 22mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 240, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-008', name: 'Tata GI Wire 24mm', description: 'GI Wire 24mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 260, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-009', name: 'Tata GI Wire 26mm', description: 'GI Wire 26mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 280, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-010', name: 'Tata GI Wire 28mm', description: 'GI Wire 28mm gauge', brand: 'Tata', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 300, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-011', name: 'JSW GI Wire 10mm', description: 'GI Wire 10mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 115, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-012', name: 'JSW GI Wire 12mm', description: 'GI Wire 12mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 135, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-013', name: 'JSW GI Wire 14mm', description: 'GI Wire 14mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 155, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-014', name: 'JSW GI Wire 16mm', description: 'GI Wire 16mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 175, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-015', name: 'JSW GI Wire 18mm', description: 'GI Wire 18mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 195, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-016', name: 'JSW GI Wire 20mm', description: 'GI Wire 20mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 215, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-017', name: 'JSW GI Wire 22mm', description: 'GI Wire 22mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 235, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-018', name: 'JSW GI Wire 24mm', description: 'GI Wire 24mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 255, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-019', name: 'JSW GI Wire 26mm', description: 'GI Wire 26mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 275, status: 'In Stock', image_emoji: '🔩' },
-    { product_id: 'GRN-020', name: 'JSW GI Wire 28mm', description: 'GI Wire 28mm gauge', brand: 'JSW', category: 'Wire', quantity: 500, unit: 'KG', unit_cost: 295, status: 'In Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-001', name: 'Tata GI Wire 10mm', description: 'GI Wire 10mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-002', name: 'Tata GI Wire 12mm', description: 'GI Wire 12mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-003', name: 'Tata GI Wire 14mm', description: 'GI Wire 14mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-004', name: 'Tata GI Wire 16mm', description: 'GI Wire 16mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-005', name: 'Tata GI Wire 18mm', description: 'GI Wire 18mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-006', name: 'Tata GI Wire 20mm', description: 'GI Wire 20mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-007', name: 'Tata GI Wire 22mm', description: 'GI Wire 22mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-008', name: 'Tata GI Wire 24mm', description: 'GI Wire 24mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-009', name: 'Tata GI Wire 26mm', description: 'GI Wire 26mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-010', name: 'Tata GI Wire 28mm', description: 'GI Wire 28mm gauge', brand: 'Tata', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-011', name: 'JSW GI Wire 10mm', description: 'GI Wire 10mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-012', name: 'JSW GI Wire 12mm', description: 'GI Wire 12mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-013', name: 'JSW GI Wire 14mm', description: 'GI Wire 14mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-014', name: 'JSW GI Wire 16mm', description: 'GI Wire 16mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-015', name: 'JSW GI Wire 18mm', description: 'GI Wire 18mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-016', name: 'JSW GI Wire 20mm', description: 'GI Wire 20mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-017', name: 'JSW GI Wire 22mm', description: 'GI Wire 22mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-018', name: 'JSW GI Wire 24mm', description: 'GI Wire 24mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-019', name: 'JSW GI Wire 26mm', description: 'GI Wire 26mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
+    { product_id: 'GRN-020', name: 'JSW GI Wire 28mm', description: 'GI Wire 28mm gauge', brand: 'JSW', category: 'Wire', quantity: 0, unit: 'KG', unit_cost: 0, status: 'Out of Stock', image_emoji: '🔩' },
   ];
   const ins = db.prepare(`INSERT INTO inventory (product_id,name,description,brand,category,quantity,unit,unit_cost,status,image_emoji) VALUES (?,?,?,?,?,?,?,?,?,?)`);
   items.forEach(i => ins.run(i.product_id, i.name, i.description, i.brand, i.category, i.quantity, i.unit, i.unit_cost, i.status, i.image_emoji));
-
-  const purchases = [
-    { transaction_id: 'GRN-9201', product_name: 'Tata GI Wire 10mm', vendor: 'Tata Steel', quantity: 500, unit: 'KG', unit_cost: 120, total_value: 60000, status: 'FULFILLED' },
-    { transaction_id: 'GRN-9188', product_name: 'Tata GI Wire 16mm', vendor: 'Tata Steel', quantity: 500, unit: 'KG', unit_cost: 180, total_value: 90000, status: 'FULFILLED' },
-    { transaction_id: 'GRN-8992', product_name: 'JSW GI Wire 12mm', vendor: 'JSW Steel', quantity: 500, unit: 'KG', unit_cost: 135, total_value: 67500, status: 'FULFILLED' },
-    { transaction_id: 'GRN-8851', product_name: 'JSW GI Wire 20mm', vendor: 'JSW Steel', quantity: 500, unit: 'KG', unit_cost: 215, total_value: 107500, status: 'PENDING' },
-    { transaction_id: 'GRN-8743', product_name: 'Tata GI Wire 24mm', vendor: 'Tata Steel', quantity: 500, unit: 'KG', unit_cost: 260, total_value: 130000, status: 'FULFILLED' },
-  ];
-  const insPur = db.prepare(`INSERT INTO purchases (transaction_id,product_name,vendor,quantity,unit,unit_cost,total_value,status) VALUES (?,?,?,?,?,?,?,?)`);
-  purchases.forEach(p => insPur.run(p.transaction_id, p.product_name, p.vendor, p.quantity, p.unit, p.unit_cost, p.total_value, p.status));
-
-  const sales = [
-    { transaction_id: 'SL-9021', product_name: 'Tata GI Wire 10mm', customer: 'Ram Hardware', quantity: 100, unit: 'KG', unit_price: 135, total_value: 13500, status: 'COMPLETED', category: 'Direct Sale' },
-    { transaction_id: 'SL-9022', product_name: 'JSW GI Wire 12mm', customer: 'Shyam Traders', quantity: 150, unit: 'KG', unit_price: 150, total_value: 22500, status: 'COMPLETED', category: 'Direct Sale' },
-    { transaction_id: 'SL-9023', product_name: 'Tata GI Wire 18mm', customer: 'City Builders', quantity: 200, unit: 'KG', unit_price: 220, total_value: 44000, status: 'PROCESSING', category: 'Direct Sale' },
-    { transaction_id: 'SL-9024', product_name: 'JSW GI Wire 22mm', customer: 'Metro Constructions', quantity: 120, unit: 'KG', unit_price: 250, total_value: 30000, status: 'COMPLETED', category: 'Direct Sale' },
-  ];
-  const insSale = db.prepare(`INSERT INTO sales (transaction_id,product_name,customer,quantity,unit,unit_price,total_value,status,category) VALUES (?,?,?,?,?,?,?,?,?)`);
-  sales.forEach(s => insSale.run(s.transaction_id, s.product_name, s.customer, s.quantity, s.unit, s.unit_price, s.total_value, s.status, s.category));
 }
 
 // ── IPC Handlers ───────────────────────────────────────────────────────────────
@@ -243,8 +226,19 @@ function registerIpcHandlers() {
   ipcMain.handle('sales:add', (e, sale) => {
     const txId = 'SL-' + String(Date.now()).slice(-6);
     const total = sale.quantity * sale.unit_price;
+    const category = sale.category || 'Direct Sale';
     db.prepare(`INSERT INTO sales (transaction_id,product_name,customer,quantity,unit,unit_price,total_value,status,category,notes) VALUES (?,?,?,?,?,?,?,?,?,?)`)
-      .run(txId, sale.product_name, sale.customer||'', sale.quantity, sale.unit||'Units', sale.unit_price, total, sale.status||'COMPLETED', sale.category||'Direct Sale', sale.notes||'');
+      .run(txId, sale.product_name, sale.customer||'', sale.quantity, sale.unit||'Units', sale.unit_price, total, sale.status||'COMPLETED', category, sale.notes||'');
+    // Also record in manufacture/scrap tables so they appear in those reports
+    if (category === 'Manufacture Sale') {
+      const mfgId = 'MFG-' + String(Date.now()).slice(-6);
+      db.prepare(`INSERT INTO manufacture (transaction_id,product_name,brand,specification,quantity,unit,unit_cost,status,notes) VALUES (?,?,?,?,?,?,?,?,?)`)
+        .run(mfgId, sale.product_name, sale.brand||'', sale.specification||'', sale.quantity, sale.unit||'Units', sale.unit_price, 'MANUFACTURED', sale.notes||'');
+    } else if (category === 'Scrap Sale') {
+      const scrId = 'SCR-' + String(Date.now()).slice(-6);
+      db.prepare(`INSERT INTO scrap (transaction_id,product_name,quantity,unit,reason,value_lost,status) VALUES (?,?,?,?,?,?,?)`)
+        .run(scrId, sale.product_name, sale.quantity, sale.unit||'Units', sale.notes||'Scrap Sale', total, 'SCRAPPED');
+    }
     const inv = db.prepare('SELECT * FROM inventory WHERE name LIKE ?').get(`%${sale.product_name}%`);
     if (inv) {
       const newQty = Math.max(0, inv.quantity - sale.quantity);
@@ -356,10 +350,11 @@ function registerIpcHandlers() {
   });
 
   // PDF Export
-  ipcMain.handle('report:printPDF', async (e, htmlContent) => {
+  ipcMain.handle('report:printPDF', async (e, htmlContent, suggestedName) => {
+    const defaultName = suggestedName || 'report.pdf';
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: 'Save Report as PDF',
-      defaultPath: path.join(app.getPath('downloads'), 'report.pdf'),
+      defaultPath: path.join(app.getPath('downloads'), defaultName),
       filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
     });
     if (canceled || !filePath) return { success: false };
@@ -369,7 +364,20 @@ function registerIpcHandlers() {
     const pdfData = await pdfWin.webContents.printToPDF({ landscape: true, printBackground: true, pageSize: 'A4' });
     pdfWin.destroy();
     fs.writeFileSync(filePath, pdfData);
+    shell.openPath(filePath);
     return { success: true, filePath };
+  });
+
+  // View Report in popup window
+  ipcMain.handle('report:viewHTML', async (e, htmlContent, title) => {
+    const viewWin = new BrowserWindow({
+      width: 1100,
+      height: 750,
+      title: title || 'Report Preview',
+      webPreferences: { nodeIntegration: false, contextIsolation: false }
+    });
+    await viewWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent));
+    return { success: true };
   });
 }
 
