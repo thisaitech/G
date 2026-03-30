@@ -89,11 +89,11 @@ function initDatabase() {
 
   // Reset DB if data version is outdated
   const dbVer = db.prepare("SELECT value FROM settings WHERE key='db_version'").get();
-  if (!dbVer || dbVer.value !== '4') {
-    // Version 4: full reset including inventory — start everything at 0
+  if (!dbVer || dbVer.value !== '5') {
+    // Version 5: full reset — all quantities to 0, no transactions
     db.exec('DELETE FROM inventory; DELETE FROM purchases; DELETE FROM sales; DELETE FROM manufacture; DELETE FROM scrap;');
     seedData();
-    db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES ('db_version','4')").run();
+    db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES ('db_version','5')").run();
   }
 }
 
