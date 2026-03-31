@@ -267,6 +267,19 @@ function registerIpcHandlers() {
     return { rows, totals };
   });
 
+  ipcMain.handle('reports:getDirectSales', (e, filters) => {
+    let q = "SELECT * FROM sales WHERE category='Direct Sale'"; const p = [];
+    if (filters?.dateFrom) { q += ' AND sale_date >= ?'; p.push(filters.dateFrom); }
+    if (filters?.dateTo)   { q += ' AND sale_date <= ?'; p.push(filters.dateTo+' 23:59:59'); }
+    q += ' ORDER BY sale_date DESC';
+    const rows = db.prepare(q).all(...p);
+    let tq = "SELECT COUNT(*) as count, SUM(quantity) as items, SUM(total_value) as revenue FROM sales WHERE category='Direct Sale'"; const tp = [];
+    if (filters?.dateFrom) { tq += ' AND sale_date >= ?'; tp.push(filters.dateFrom); }
+    if (filters?.dateTo)   { tq += ' AND sale_date <= ?'; tp.push(filters.dateTo+' 23:59:59'); }
+    const totals = db.prepare(tq).get(...tp);
+    return { rows, totals };
+  });
+
   ipcMain.handle('reports:getPurchases', (e, filters) => {
     let q = 'SELECT * FROM purchases WHERE 1=1'; const p = [];
     if (filters?.dateFrom) { q += ' AND purchase_date >= ?'; p.push(filters.dateFrom); }

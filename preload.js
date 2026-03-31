@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Reports
   getReportSales: (filters) => ipcRenderer.invoke('reports:getSales', filters),
+  getReportDirectSales: (filters) => ipcRenderer.invoke('reports:getDirectSales', filters),
   getReportPurchases: (filters) => ipcRenderer.invoke('reports:getPurchases', filters),
   getReportStock: () => ipcRenderer.invoke('reports:getStock'),
   getReportManufacture: (filters) => ipcRenderer.invoke('reports:getManufacture', filters),

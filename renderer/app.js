@@ -810,8 +810,8 @@ async function renderReports() {
     <div class="report-cards-grid">
       <div class="report-card ${reportType==='sales'?'selected':''}" data-rtype="sales">
         <div class="report-card-icon" style="background:#e8f0e5">📈</div>
-        <div class="report-card-title">Sales Report</div>
-        <div class="report-card-desc">Revenue and volume analysis.</div>
+        <div class="report-card-title">Total Sales Report</div>
+        <div class="report-card-desc">All sales revenue and volume.</div>
         <button class="select-type-btn">SELECT TYPE ›</button>
       </div>
       <div class="report-card ${reportType==='purchase'?'selected':''}" data-rtype="purchase">
@@ -839,6 +839,13 @@ async function renderReports() {
           <div>
             <div style="font-size:13px;font-weight:700">Scrap Report</div>
             <div style="font-size:11px;color:var(--on-surface-variant)">Loss and wastage metrics</div>
+          </div>
+        </div>
+        <div class="side-report-card ${reportType==='directsale'?'selected':''}" data-rtype="directsale">
+          <div class="side-report-icon" style="background:#e3f2fd">🤝</div>
+          <div>
+            <div style="font-size:13px;font-weight:700">Direct Sale</div>
+            <div style="font-size:11px;color:var(--on-surface-variant)">Direct sale transactions only</div>
           </div>
         </div>
       </div>
@@ -881,7 +888,7 @@ async function loadReportPreview() {
 
   const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
   const dateLabel = `${fmtDate(reportDateFrom)} - ${fmtDate(reportDateTo)}`;
-  const typeName = { sales:'SALES REPORT', purchase:'PURCHASE REPORT', stock:'STOCK REPORT', manufacture:'MANUFACTURE REPORT', scrap:'SCRAP REPORT' }[reportType] || 'REPORT';
+  const typeName = { sales:'TOTAL SALES REPORT', purchase:'PURCHASE REPORT', stock:'STOCK REPORT', manufacture:'MANUFACTURE REPORT', scrap:'SCRAP REPORT', directsale:'DIRECT SALE REPORT' }[reportType] || 'REPORT';
 
   el.innerHTML = `
     <div class="preview-bar">
@@ -941,6 +948,35 @@ async function loadReportTable(type, filters) {
       <div class="report-summary">
         <div class="summary-item"><div class="summary-label">Items Sold</div><div class="summary-value">${fmt(t.items || 0)}</div></div>
         <div class="summary-item"><div class="summary-label">Average Margin</div><div class="summary-value">34.2%</div></div>
+        <div class="summary-item"><div class="summary-label">Net Total</div><div class="summary-value">${fmtMoney(t.revenue || 0)}</div></div>
+      </div>
+    `;
+  } else if (type === 'directsale') {
+    const data = await window.api.getReportDirectSales(filters);
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    el.innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Product</th><th>Quantity</th><th>Unit Price</th><th>Total Value</th><th>Status</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td class="td-green">#${r.transaction_id}</td>
+                <td class="td-bold">${r.product_name}</td>
+                <td>${fmt(r.quantity)} ${r.unit}</td>
+                <td class="td-money">${fmtMoney(r.unit_price)}</td>
+                <td class="td-money td-bold">${fmtMoney(r.total_value)}</td>
+                <td>${chip(r.status)}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="6" class="empty-state"><div class="empty-icon">🤝</div><div class="empty-text">No direct sale data</div></td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div class="report-summary">
+        <div class="summary-item"><div class="summary-label">Items Sold</div><div class="summary-value">${fmt(t.items || 0)}</div></div>
         <div class="summary-item"><div class="summary-label">Net Total</div><div class="summary-value">${fmtMoney(t.revenue || 0)}</div></div>
       </div>
     `;
@@ -1077,13 +1113,13 @@ window.viewReportPDF = async () => {
   showToast('Opening report…');
   const html = await buildReportHTML();
   if (!html) return;
-  const typeNames = { sales:'Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report' };
+  const typeNames = { sales:'Total Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report', directsale:'Direct Sale Report' };
   await window.api.viewHTML(html, typeNames[reportType] || 'Report');
 };
 
 async function buildReportHTML() {
   const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
-  const typeNames = { sales:'Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report' };
+  const typeNames = { sales:'Total Sales Report', purchase:'Purchase Report', stock:'Stock Report', manufacture:'Manufacture Report', scrap:'Scrap Report', directsale:'Direct Sale Report' };
   const typeName = typeNames[reportType] || 'Report';
   const dateLabel = `${fmtDate(reportDateFrom)} — ${fmtDate(reportDateTo)}`;
 
@@ -1196,6 +1232,27 @@ async function buildReportHTML() {
         <div class="summary-item"><div class="summary-label">Total Qty (KG)</div><div class="summary-value">${fmt(t.total_qty||0)}</div></div>
         <div class="summary-item highlight loss"><div class="summary-label">Total Value Lost</div><div class="summary-value">₹${fmt(t.total_loss||0)}</div></div>
       </div>`;
+  } else if (reportType === 'directsale') {
+    const data = await window.api.getReportDirectSales(filters);
+    const rows = data.rows || [];
+    const t = data.totals || {};
+    tableHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Transaction ID</th><th>Product</th><th>Customer</th><th>Qty (KG)</th><th>Unit Price</th><th>Total Value</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map((r,i) => `<tr class="${i%2===0?'even':''}">
+            <td>${i+1}</td><td>${r.transaction_id}</td><td>${r.product_name}</td><td>${r.customer||'—'}</td>
+            <td>${fmt(r.quantity)} ${r.unit}</td><td>₹${fmt(r.unit_price)}</td>
+            <td class="money">₹${fmt(r.total_value)}</td><td><span class="status-chip">${r.status}</span></td><td>${fmtDate(r.sale_date)}</td>
+          </tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:20px">No records found</td></tr>'}
+        </tbody>
+      </table>`;
+    summaryHTML = `
+      <div class="summary-box">
+        <div class="summary-item"><div class="summary-label">Total Transactions</div><div class="summary-value">${rows.length}</div></div>
+        <div class="summary-item"><div class="summary-label">Total Qty Sold (KG)</div><div class="summary-value">${fmt(t.items||0)}</div></div>
+        <div class="summary-item highlight"><div class="summary-label">Total Revenue</div><div class="summary-value">₹${fmt(t.revenue||0)}</div></div>
+      </div>`;
   }
 
   const html = `<!DOCTYPE html>
@@ -1255,7 +1312,7 @@ async function buildReportHTML() {
 }
 
 window.downloadReportPDF = async () => {
-  const typeKey = { sales:'Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap' }[reportType] || 'Report';
+  const typeKey = { sales:'Total-Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap', directsale:'Direct-Sale' }[reportType] || 'Report';
   const dateFrom = reportDateFrom || new Date().toISOString().slice(0,10);
   const dateTo = reportDateTo || new Date().toISOString().slice(0,10);
   const pdfFilename = reportType === 'stock'
@@ -1274,7 +1331,7 @@ window.downloadReportPDF = async () => {
 
 window.downloadReportCSV = async () => {
   const filters = { dateFrom: reportDateFrom, dateTo: reportDateTo };
-  const typeName = { sales:'Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap' }[reportType] || 'Report';
+  const typeName = { sales:'Total-Sales', purchase:'Purchase', stock:'Stock', manufacture:'Manufacture', scrap:'Scrap', directsale:'Direct-Sale' }[reportType] || 'Report';
   const csvDateFrom = reportDateFrom || new Date().toISOString().slice(0,10);
   const csvDateTo = reportDateTo || new Date().toISOString().slice(0,10);
   let csv = '';
@@ -1311,6 +1368,12 @@ window.downloadReportCSV = async () => {
     const rows = data.rows || [];
     csv = ['Transaction ID,Product,Quantity,Unit,Reason,Value Lost,Status,Date',
       ...rows.map(r => `"${r.transaction_id}","${r.product_name}",${r.quantity},"${r.unit}","${r.reason||''}",${r.value_lost},"${r.status}","${r.scrap_date}"`)
+    ].join('\n');
+  } else if (reportType === 'directsale') {
+    const data = await window.api.getReportDirectSales(filters);
+    const rows = data.rows || [];
+    csv = ['Transaction ID,Product,Customer,Quantity,Unit,Unit Price,Total Value,Status,Date',
+      ...rows.map(r => `"${r.transaction_id}","${r.product_name}","${r.customer||''}",${r.quantity},"${r.unit}",${r.unit_price},${r.total_value},"${r.status}","${r.sale_date}"`)
     ].join('\n');
   }
 
